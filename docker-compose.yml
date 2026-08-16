@@ -6,23 +6,23 @@ services:
     container_name: lms-api-gateway
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "${GATEWAY_PORT:-4000}:${GATEWAY_PORT:-4000}"
     environment:
-      NODE_ENV: development
-      GATEWAY_HOST: 0.0.0.0
-      GATEWAY_PORT: 4000
-      JWT_SECRET: 39HYI3CphTNFvw80gAN9hCfJc03yPvdCbuaTzdp0aoL
-      API_PREFIX: /api
-      API_VERSION: v1
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: Dhiraj@123
-      AUTH_SERVICE_URL: http://auth-service:5001
-      AUTH_ROUTE_PREFIX: /auth
-      USER_SERVICE_URL: http://notification-service:5002
-      USER_ROUTE_PREFIX: /users
-      COURSE_SERVICE_URL: http://course-service:5003
-      COURSE_ROUTE_PREFIX: /courses
+      NODE_ENV: ${NODE_ENV:-development}
+      GATEWAY_HOST: ${GATEWAY_HOST:-0.0.0.0}
+      GATEWAY_PORT: ${GATEWAY_PORT:-4000}
+      JWT_SECRET: ${JWT_SECRET}
+      API_PREFIX: ${API_PREFIX:-/api}
+      API_VERSION: ${API_VERSION:-v1}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:5001}
+      AUTH_ROUTE_PREFIX: ${AUTH_ROUTE_PREFIX:-/auth}
+      USER_SERVICE_URL: ${USER_SERVICE_URL:-http://notification-service:5002}
+      USER_ROUTE_PREFIX: ${USER_ROUTE_PREFIX:-/users}
+      COURSE_SERVICE_URL: ${COURSE_SERVICE_URL:-http://course-service:5003}
+      COURSE_ROUTE_PREFIX: ${COURSE_ROUTE_PREFIX:-/courses}
     volumes:
       - ./api-gateway/src:/app/src
     command: npm run dev
@@ -41,10 +41,10 @@ services:
     container_name: lms-auth-service
     restart: unless-stopped
     ports:
-      - "5001:5001"
+      - "${AUTH_SERVICE_PORT:-5001}:${AUTH_SERVICE_PORT:-5001}"
     environment:
-      NODE_ENV: development
-      PORT: 5001
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${AUTH_SERVICE_PORT:-5001}
     volumes:
       - ./auth-service/src:/app/src
     command: npm run dev
@@ -58,10 +58,10 @@ services:
     container_name: lms-notification-service
     restart: unless-stopped
     ports:
-      - "5002:5002"
+      - "${NOTIFICATION_SERVICE_PORT:-5002}:${NOTIFICATION_SERVICE_PORT:-5002}"
     environment:
-      NODE_ENV: development
-      PORT: 5002
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${NOTIFICATION_SERVICE_PORT:-5002}
     volumes:
       - ./notification-service/src:/app/src
     command: npm run dev
@@ -73,17 +73,17 @@ services:
     container_name: lms-redis
     restart: unless-stopped
     environment:
-      REDIS_PASSWORD: Dhiraj@123
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     command:
       - redis-server
       - --appendonly
       - "yes"
       - --requirepass
-      - Dhiraj@123
+      - ${REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "Dhiraj@123", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
