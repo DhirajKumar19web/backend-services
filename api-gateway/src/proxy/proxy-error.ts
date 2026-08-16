@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import { Socket } from "node:net";
 
 import { logger } from "../middlewares/request-logger.middleware.js";
-import { ApiResponse } from "../utils/api-response.js";
+import {
+  AppError,
+  BadGatewayError,
+  ServiceUnavailableError,
+  GatewayTimeoutError,
+} from "../errors/app-error.js";
 
 export interface ProxyError extends Error {
   code?: string;
@@ -24,33 +29,22 @@ export const proxyErrorHandler = (
     return;
   }
 
-  let statusCode = 502;
-  let message = "Upstream service error";
+  let appError: AppError;
 
   if (err.code === "ECONNREFUSED") {
-    statusCode = 503;
-    message = "Upstream service unavailable";
+    appError = new ServiceUnavailableError();
   } else if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT") {
-    statusCode = 504;
-    message = "Upstream service timeout";
+    appError = new GatewayTimeoutError();
+  } else {
+    appError = new BadGatewayError();
   }
 
-  const errorCode =
-    statusCode === 503
-      ? "SERVICE_UNAVAILABLE"
-      : statusCode === 504
-        ? "GATEWAY_TIMEOUT"
-        : "BAD_GATEWAY";
-
-  const response = ApiResponse.error({
-    statusCode,
-    message,
+  res.status(appError.statusCode).json({
+    success: false,
     error: {
-      code: errorCode,
-      message,
+      code: appError.errorCode,
+      message: appError.message,
     },
   });
-
-  res.status(statusCode).json(response);
 };
 

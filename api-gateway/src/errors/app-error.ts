@@ -54,3 +54,22 @@ export class TooManyRequestsError extends AppError {
     this.retryAfter = retryAfter;
   }
 }
+
+export class BadGatewayError extends AppError {
+  constructor(message = "Upstream service error", errorCode = "BAD_GATEWAY") {
+    super(message, HTTP_STATUS.BAD_GATEWAY, errorCode);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message = "Upstream service unavailable", errorCode = "SERVICE_UNAVAILABLE") {
+    super(message, HTTP_STATUS.SERVICE_UNAVAILABLE, errorCode);
+  }
+}
+
+export class GatewayTimeoutError extends AppError {
+  constructor(message = "Upstream service timeout", errorCode = "GATEWAY_TIMEOUT") {
+    super(message, HTTP_STATUS.GATEWAY_TIMEOUT, errorCode);
+  }
+}
+
