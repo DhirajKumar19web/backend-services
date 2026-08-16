@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Socket } from "node:net";
 
 import { logger } from "../middlewares/request-logger.middleware.js";
+import { ApiResponse } from "../utils/api-response.js";
 
 export interface ProxyError extends Error {
   code?: string;
@@ -34,16 +35,22 @@ export const proxyErrorHandler = (
     message = "Upstream service timeout";
   }
 
-  res.status(statusCode).json({
-    success: false,
+  const errorCode =
+    statusCode === 503
+      ? "SERVICE_UNAVAILABLE"
+      : statusCode === 504
+        ? "GATEWAY_TIMEOUT"
+        : "BAD_GATEWAY";
+
+  const response = ApiResponse.error({
+    statusCode,
+    message,
     error: {
-      code:
-        statusCode === 503
-          ? "SERVICE_UNAVAILABLE"
-          : statusCode === 504
-            ? "GATEWAY_TIMEOUT"
-            : "BAD_GATEWAY",
+      code: errorCode,
       message,
     },
   });
+
+  res.status(statusCode).json(response);
 };
+
