@@ -8,7 +8,7 @@ const server = app.listen(
   env.GATEWAY_HOST,
   () => {
     logger.info(
-      `🚀 API Gateway running on http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}`,
+      `API Gateway running on http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}`,
     );
   },
 );
