@@ -35,6 +35,7 @@ COPY --from=builder /app/dist ./dist
 
 USER node
 
-EXPOSE 4000
+ARG PORT
+EXPOSE ${PORT}
 
 CMD ["node", "dist/server.js"]

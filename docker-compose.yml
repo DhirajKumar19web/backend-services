@@ -3,6 +3,8 @@ services:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${GATEWAY_PORT}
     container_name: lms-api-gateway
     restart: unless-stopped
     ports:
@@ -38,6 +40,8 @@ services:
     build:
       context: ./auth-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${AUTH_SERVICE_PORT}
     container_name: lms-auth-service
     restart: unless-stopped
     ports:
@@ -55,6 +59,8 @@ services:
     build:
       context: ./notification-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${NOTIFICATION_SERVICE_PORT}
     container_name: lms-notification-service
     restart: unless-stopped
     ports:
@@ -72,6 +78,8 @@ services:
     build:
       context: ./course-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${COURSE_SERVICE_PORT}
     container_name: lms-course-service
     restart: unless-stopped
     ports:
@@ -89,6 +97,8 @@ services:
     build:
       context: ./user-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${USER_SERVICE_PORT}
     container_name: lms-user-service
     restart: unless-stopped
     ports:
@@ -106,6 +116,8 @@ services:
     build:
       context: ./enrollment-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${ENROLLMENT_SERVICE_PORT}
     container_name: lms-enrollment-service
     restart: unless-stopped
     ports:
@@ -123,6 +135,8 @@ services:
     build:
       context: ./payment-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${PAYMENT_SERVICE_PORT}
     container_name: lms-payment-service
     restart: unless-stopped
     ports:
@@ -140,6 +154,8 @@ services:
     build:
       context: ./progress-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${PROGRESS_SERVICE_PORT}
     container_name: lms-progress-service
     restart: unless-stopped
     ports:
@@ -157,6 +173,8 @@ services:
     build:
       context: ./assessment-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${ASSESSMENT_SERVICE_PORT}
     container_name: lms-assessment-service
     restart: unless-stopped
     ports:
@@ -174,6 +192,8 @@ services:
     build:
       context: ./certificate-service
       dockerfile: Dockerfile.dev
+      args:
+        PORT: ${CERTIFICATE_SERVICE_PORT}
     container_name: lms-certificate-service
     restart: unless-stopped
     ports:

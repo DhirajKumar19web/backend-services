@@ -8,6 +8,7 @@ RUN npm ci
 
 COPY . .
 
-EXPOSE 5005
+ARG PORT
+EXPOSE ${PORT}
 
 CMD ["npm", "run", "dev"]
