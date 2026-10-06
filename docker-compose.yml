@@ -1,10 +1,57 @@
+version: '3.8'
+
 services:
+  # ============================================================
+  # MinIO Object Storage (Official Open-Source Standard Image)
+  # ============================================================
+  minio:
+    # Docker Hub block ko bypass karne ke liye chainguard verified tag:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: lms-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --address ":${MINIO_PORT}" --console-address ":${MINIO_CONSOLE_PORT}"
+    volumes:
+      - minio-data:/data
+    networks:
+      - lms-network
+
+  # ============================================================
+  # MinIO Bucket Initialization (Using Matching Official Client)
+  # ============================================================
+  minio-init:
+    image: amazon/aws-cli:latest
+    container_name: lms-minio-init
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO...' &&
+      sleep 5 &&
+      aws --endpoint-url http://minio:${MINIO_PORT} s3 mb s3://${MINIO_BUCKET_NAME} || true &&
+      echo 'MinIO bucket ready: '${MINIO_BUCKET_NAME}
+      "
+    networks:
+      - lms-network
+
+  # ============================================================
+  # API Gateway
+  # ============================================================
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${GATEWAY_PORT}
     container_name: lms-api-gateway
     restart: unless-stopped
     ports:
@@ -36,12 +83,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Auth Service
+  # ============================================================
   auth-service:
     build:
       context: ./auth-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${AUTH_SERVICE_PORT}
     container_name: lms-auth-service
     restart: unless-stopped
     ports:
@@ -55,12 +103,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Notification Service
+  # ============================================================
   notification-service:
     build:
       context: ./notification-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${NOTIFICATION_SERVICE_PORT}
     container_name: lms-notification-service
     restart: unless-stopped
     ports:
@@ -71,15 +120,19 @@ services:
     volumes:
       - ./notification-service/src:/app/src
     command: npm run dev
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     networks:
       - lms-network
 
+  # ============================================================
+  # Course Service
+  # ============================================================
   course-service:
     build:
       context: ./course-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${COURSE_SERVICE_PORT}
     container_name: lms-course-service
     restart: unless-stopped
     ports:
@@ -87,18 +140,25 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${COURSE_SERVICE_PORT}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_BUCKET: ${MINIO_BUCKET_NAME}
     volumes:
       - ./course-service/src:/app/src
     command: npm run dev
+    depends_on:
+      minio:
+        condition: service_started
     networks:
       - lms-network
 
+  # ============================================================
+  # User Service
+  # ============================================================
   user-service:
     build:
       context: ./user-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${USER_SERVICE_PORT}
     container_name: lms-user-service
     restart: unless-stopped
     ports:
@@ -106,18 +166,25 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${USER_SERVICE_PORT}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_BUCKET: ${MINIO_BUCKET_NAME}
     volumes:
       - ./user-service/src:/app/src
     command: npm run dev
+    depends_on:
+      minio:
+        condition: service_started
     networks:
       - lms-network
 
+  # ============================================================
+  # Enrollment Service
+  # ============================================================
   enrollment-service:
     build:
       context: ./enrollment-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${ENROLLMENT_SERVICE_PORT}
     container_name: lms-enrollment-service
     restart: unless-stopped
     ports:
@@ -131,12 +198,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Payment Service
+  # ============================================================
   payment-service:
     build:
       context: ./payment-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${PAYMENT_SERVICE_PORT}
     container_name: lms-payment-service
     restart: unless-stopped
     ports:
@@ -150,12 +218,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Progress Service
+  # ============================================================
   progress-service:
     build:
       context: ./progress-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${PROGRESS_SERVICE_PORT}
     container_name: lms-progress-service
     restart: unless-stopped
     ports:
@@ -169,12 +238,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Assessment Service
+  # ============================================================
   assessment-service:
     build:
       context: ./assessment-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${ASSESSMENT_SERVICE_PORT}
     container_name: lms-assessment-service
     restart: unless-stopped
     ports:
@@ -188,12 +258,13 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Certificate Service
+  # ============================================================
   certificate-service:
     build:
       context: ./certificate-service
       dockerfile: Dockerfile.dev
-      args:
-        PORT: ${CERTIFICATE_SERVICE_PORT}
     container_name: lms-certificate-service
     restart: unless-stopped
     ports:
@@ -207,8 +278,11 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # Redis Cache & Rate Limiting (Official Standard Stable Tag)
+  # ============================================================
   redis:
-    image: redis:8-alpine
+    image: redis:alpine
     container_name: lms-redis
     restart: unless-stopped
     environment:
@@ -229,47 +303,42 @@ services:
     networks:
       - lms-network
 
+  # ============================================================
+  # RabbitMQ Message Broker (Standard Alpine)
+  # ============================================================
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:alpine
     container_name: lms-rabbitmq
     restart: unless-stopped
     ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_UI_PORT}:15672"
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_NODE_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_management listener [{port,${RABBITMQ_UI_PORT}}]"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
     networks:
       - lms-network
 
-  minio:
-    image: minio/minio:latest
-    container_name: lms-minio
-    restart: unless-stopped
-    ports:
-      - "${MINIO_PORT}:${MINIO_PORT}"
-      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --address ":${MINIO_PORT}" --console-address ":${MINIO_CONSOLE_PORT}"
-    volumes:
-      - minio-data:/data
-    networks:
-      - lms-network
-
+# ============================================================
+# Networks & Volumes Definitions
+# ============================================================
 networks:
   lms-network:
     driver: bridge
 
 volumes:
-  redis-data:
-  rabbitmq-data:
   minio-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
