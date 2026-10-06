@@ -68,6 +68,125 @@ services:
     networks:
       - lms-network
 
+  course-service:
+    build:
+      context: ./course-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-course-service
+    restart: unless-stopped
+    ports:
+      - "${COURSE_SERVICE_PORT}:${COURSE_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${COURSE_SERVICE_PORT}
+    volumes:
+      - ./course-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${USER_SERVICE_PORT}
+    volumes:
+      - ./user-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-enrollment-service
+    restart: unless-stopped
+    ports:
+      - "${ENROLLMENT_SERVICE_PORT}:${ENROLLMENT_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${ENROLLMENT_SERVICE_PORT}
+    volumes:
+      - ./enrollment-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-payment-service
+    restart: unless-stopped
+    ports:
+      - "${PAYMENT_SERVICE_PORT}:${PAYMENT_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PAYMENT_SERVICE_PORT}
+    volumes:
+      - ./payment-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  progress-service:
+    build:
+      context: ./progress-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-progress-service
+    restart: unless-stopped
+    ports:
+      - "${PROGRESS_SERVICE_PORT}:${PROGRESS_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PROGRESS_SERVICE_PORT}
+    volumes:
+      - ./progress-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  assessment-service:
+    build:
+      context: ./assessment-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-assessment-service
+    restart: unless-stopped
+    ports:
+      - "${ASSESSMENT_SERVICE_PORT}:${ASSESSMENT_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${ASSESSMENT_SERVICE_PORT}
+    volumes:
+      - ./assessment-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
+  certificate-service:
+    build:
+      context: ./certificate-service
+      dockerfile: Dockerfile.dev
+    container_name: lms-certificate-service
+    restart: unless-stopped
+    ports:
+      - "${CERTIFICATE_SERVICE_PORT}:${CERTIFICATE_SERVICE_PORT}"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${CERTIFICATE_SERVICE_PORT}
+    volumes:
+      - ./certificate-service/src:/app/src
+    command: npm run dev
+    networks:
+      - lms-network
+
   redis:
     image: redis:8-alpine
     container_name: lms-redis
@@ -90,9 +209,30 @@ services:
     networks:
       - lms-network
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: lms-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_UI_PORT}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
 networks:
   lms-network:
     driver: bridge
 
 volumes:
   redis-data:
+  rabbitmq-data:
