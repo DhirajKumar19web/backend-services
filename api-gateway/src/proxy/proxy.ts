@@ -1,5 +1,5 @@
-import { createProxyMiddleware } from "http-proxy-middleware";
-import { ClientRequest, IncomingMessage } from "node:http";
+import proxy from "express-http-proxy";
+import { Request } from "express";
 
 import { env } from "../config/env.js";
 import { proxyErrorHandler } from "./proxy-error.js";
@@ -8,34 +8,26 @@ import { REQUEST_ID_HEADER } from "../middlewares/request-id.middleware.js";
 const FORWARD_HEADERS = [REQUEST_ID_HEADER, "x-user-id"];
 
 /**
- * Forwards correlation ID & user context headers to downstream microservices
- */
-const handleProxyReq = (
-  proxyReq: ClientRequest,
-  req: IncomingMessage,
-): void => {
-  for (const header of FORWARD_HEADERS) {
-    const val = req.headers[header];
-    if (val && typeof val === "string") {
-      proxyReq.setHeader(header, val);
-    }
-  }
-};
-
-/**
  * Factory helper to create microservice proxies dynamically
  */
 const createServiceProxy = (targetUrl: string, routePrefix: string) =>
-  createProxyMiddleware({
-    target: targetUrl,
-    changeOrigin: true,
-    pathRewrite: {
-      [`^${routePrefix}`]: "",
+  proxy(targetUrl, {
+    proxyReqPathResolver: (req: Request) => {
+      return req.originalUrl.replace(new RegExp(`^${routePrefix}`), "");
     },
-    on: {
-      proxyReq: handleProxyReq,
-      error: proxyErrorHandler,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq: Request) => {
+      if (!proxyReqOpts.headers) {
+        proxyReqOpts.headers = {};
+      }
+      for (const header of FORWARD_HEADERS) {
+        const val = srcReq.headers[header];
+        if (val && typeof val === "string") {
+          proxyReqOpts.headers[header] = val;
+        }
+      }
+      return proxyReqOpts;
     },
+    proxyErrorHandler: proxyErrorHandler,
   });
 
 export const authProxy = createServiceProxy(

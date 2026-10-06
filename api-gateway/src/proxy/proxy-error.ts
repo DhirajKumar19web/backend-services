@@ -16,8 +16,8 @@ export interface ProxyError extends Error {
 
 export const proxyErrorHandler = (
   err: ProxyError,
-  _req: Request,
-  res: Response | Socket,
+  res: any,
+  next: any,
 ): void => {
   logger.error({ error: err.message, code: err.code }, "Gateway Proxy Error");
 
