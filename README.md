@@ -115,7 +115,7 @@ cp .env.example .env
 ### 3️⃣ Start All Services
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build -d
 ```
 
 > [!TIP]
@@ -213,7 +213,8 @@ curl http://localhost:5002/health
 
 ```
 ├── 📄 .env.example                 # Environment template
-├── 📄 docker-compose.yml           # Full orchestration
+├── 📄 docker-compose.dev.yml       # Local dev orchestration
+├── 📄 DOCKER_DEPLOYMENT.md         # Independent Deployment Guide
 ├── 📄 PROJECT_ANALYSIS.md          # Detailed project analysis
 │
 ├── 📁 api-gateway/                 # ✅ Core gateway service
@@ -227,7 +228,9 @@ curl http://localhost:5002/health
 │   │   ├── redis/                  # Redis client
 │   │   └── errors/                 # Custom error classes
 │   ├── Dockerfile
-│   └── Dockerfile.dev
+│   ├── Dockerfile.dev
+│   ├── docker-compose.yml      # Standalone deployment
+│   └── .env.example
 │
 ├── 📁 auth-service/                # 🚧 Authentication service
 │   ├── src/
@@ -248,8 +251,8 @@ curl http://localhost:5002/health
 
 | Command | Description |
 |---------|-------------|
-| `docker compose up --build` | Build & start all services |
-| `docker compose up --build -d` | Start in background |
+| `docker compose -f docker-compose.dev.yml up -d` | Start full local dev stack |
+| `cd api-gateway && docker compose up -d` | Start a single service in production |
 | `docker compose down` | Stop all services |
 | `docker compose down -v` | Stop & remove volumes |
 | `docker compose logs -f` | Follow all service logs |

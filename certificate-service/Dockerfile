@@ -1,39 +1,26 @@
-# ==============================
-# BUILD STAGE
-# ==============================
-
 FROM node:24-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm ci
 
-COPY tsconfig.json ./
-COPY src ./src
-
+COPY . .
 RUN npm run build
 
-
-# ==============================
-# PRODUCTION STAGE
-# ==============================
-
-FROM node:24-alpine AS production
+FROM node:24-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
 COPY package*.json ./
-
-RUN npm ci --omit=dev \
-    && npm cache clean --force
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
-USER node
+# Create a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 
+ENV NODE_ENV=production
 
-CMD ["node", "dist/server.js"]
+CMD ["node","dist/server.js"]

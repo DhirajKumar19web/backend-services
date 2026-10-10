@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm install
 
 COPY . .
 
-
+# Assume the dev script is what the user uses
 CMD ["npm", "run", "dev"]

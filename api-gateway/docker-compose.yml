@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lms-api-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-4000}:${GATEWAY_PORT:-4000}"
+    env_file:
+      - .env
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge

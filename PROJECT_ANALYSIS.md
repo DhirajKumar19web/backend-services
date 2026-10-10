@@ -2,7 +2,7 @@
 
 ## 📌 Overview
 
-This is a **Learning Management System (LMS)** backend built on a **Microservices Architecture**. The project uses TypeScript + Express.js and is orchestrated via Docker Compose.
+This is a **Learning Management System (LMS)** backend built on a **Microservices Architecture**. The project uses TypeScript + Express.js and is orchestrated via a fully independent Docker architecture where every service can be deployed standalone.
 
 ---
 
@@ -106,16 +106,26 @@ API Gateway is the most developed service. Its features:
 
 - **Docker Desktop** must be installed and running
 
-### Method 1: Docker Compose (Recommended ✅)
+### Method 1: Local Development (Recommended ✅)
 
-Easiest way — one command starts everything:
+Easiest way — one command starts everything for local development:
 
 ```bash
 # Navigate to project root
 cd "Project structure"
 
 # Build + start all services
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build -d
+```
+
+### Method 2: Independent Production Deployment
+
+Each microservice has its own `Dockerfile` and `docker-compose.yml`. You can deploy any service completely independently to its own server:
+
+```bash
+cd api-gateway
+# Update .env inside the folder with production IPs
+docker compose up -d
 ```
 
 > [!TIP]

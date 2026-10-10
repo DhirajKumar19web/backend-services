@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  enrollment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lms-enrollment-service
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    env_file:
+      - .env
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge

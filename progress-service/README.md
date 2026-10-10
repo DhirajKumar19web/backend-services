@@ -1,10 +1,10 @@
-# API-GATEWAY
+# PROGRESS-SERVICE
 This service is configured for fully independent Docker deployment.
 
 ## Build and Push Image
 ```bash
-docker build -f Dockerfile -t your-registry/api-gateway:1.0.0 .
-docker push your-registry/api-gateway:1.0.0
+docker build -f Dockerfile -t your-registry/progress-service:1.0.0 .
+docker push your-registry/progress-service:1.0.0
 ```
 
 ## Deploy to Server

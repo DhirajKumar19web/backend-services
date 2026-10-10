@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  assessment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lms-assessment-service
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    env_file:
+      - .env
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge
