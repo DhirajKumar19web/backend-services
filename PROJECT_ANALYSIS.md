@@ -42,7 +42,7 @@ This is a **Learning Management System (LMS)** backend built on a **Microservice
 
                          ┌─────────────────┐
                          │ Message Broker  │
-                         │ RabbitMQ/Kafka  │
+                         │ RabbitMQ  │
                          └─────────────────┘
 
                          ┌─────────────────┐
@@ -74,6 +74,7 @@ This is a **Learning Management System (LMS)** backend built on a **Microservice
 | Framework | Express.js v5 |
 | Validation | Zod v4 |
 | Logging | Pino |
+| Database | PostgreSQL 15 (Alpine) |
 | Caching | Redis 8 (Alpine) |
 | Proxy | http-proxy-middleware |
 | Security | Helmet |

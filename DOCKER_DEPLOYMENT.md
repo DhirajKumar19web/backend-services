@@ -85,9 +85,10 @@ Services deployed on different servers must communicate over the network.
 - Ensure that the ports (e.g., `5001` for Auth) are accessible from the API Gateway server.
 - **Security:** Do not expose internal microservice ports to the public internet. Use a firewall (e.g., UFW, AWS Security Groups) to restrict incoming traffic on port `5001` to only accept connections from the API Gateway's IP address.
 
-## 7. Infrastructure Services (Redis, RabbitMQ, MinIO)
+## 7. Infrastructure Services (PostgreSQL, Redis, RabbitMQ, MinIO)
 
 Infrastructure services should be deployed on dedicated nodes or as managed services.
+- **PostgreSQL:** Port `5432` should be restricted. Persist the `/var/lib/postgresql/data` volume.
 - **Redis:** Restrict port `6379`. Always use a strong `REDIS_PASSWORD`.
 - **RabbitMQ:** Restrict ports `5672` (AMQP) and `15672` (Management UI). Ensure `RABBITMQ_DEFAULT_USER` is not `guest` in production, as `guest` can only connect via localhost by default.
 - **MinIO:** Ensure persistent volumes are mounted for `/data`. Expose the API port (`9000`) appropriately, and restrict the Console port (`9001`).
@@ -101,7 +102,7 @@ Infrastructure services should be deployed on dedicated nodes or as managed serv
 ## 9. Persistent Volumes and Backup
 
 - **MinIO Data:** Must use a persistent volume or bind mount to a separate disk. Set up daily backups (e.g., via `mc mirror` or standard disk snapshots).
-- **Redis & RabbitMQ:** Map data directories to persistent volumes. If using them only for caching/transient messages, persistence may be optional, but recommended.
+- **PostgreSQL, Redis & RabbitMQ:** Map data directories to persistent volumes. If using them only for caching/transient messages, persistence may be optional, but recommended.
 
 ## 10. Troubleshooting and Rollbacks
 

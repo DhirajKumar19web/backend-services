@@ -50,7 +50,7 @@
 
                          ┌─────────────────┐
                          │ Message Broker  │
-                         │ RabbitMQ/Kafka  │
+                         │ RabbitMQ  │
                          └─────────────────┘
 
                          ┌─────────────────┐
@@ -82,6 +82,7 @@
 | ⚡ Framework | Express.js 5.x | HTTP server & routing |
 | 🛡️ Validation | Zod 4.x | Schema-based env & input validation |
 | 📝 Logging | Pino + pino-http | Structured JSON logging |
+| 🗄️ Database | PostgreSQL 15 (Alpine) | Core Relational DB |
 | 🔴 Cache | Redis 8 (Alpine) | Rate limiting & caching |
 | 🔀 Proxy | http-proxy-middleware 4.x | Reverse proxy to microservices |
 | 🔒 Security | Helmet 8.x | HTTP security headers |
@@ -303,7 +304,7 @@ cd notification-service && npm install && npm run dev
 - [ ] Auth Service — Database integration (PostgreSQL/MongoDB)
 - [ ] Notification Service — Email/SMS/Push logic
 - [ ] Course Service — New microservice
-- [ ] Message Queue (RabbitMQ/Kafka) for async notifications
+- [ ] Message Queue (RabbitMQ) for async notifications
 - [ ] API documentation (Swagger/OpenAPI)
 - [ ] Unit & integration tests
 - [ ] CI/CD pipeline

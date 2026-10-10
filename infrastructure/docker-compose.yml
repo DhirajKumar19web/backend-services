@@ -9,12 +9,12 @@ services:
     container_name: lms-minio-prod
     restart: unless-stopped
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    command: server /data --address ":9000" --console-address ":9001"
+    command: server /data --address ":${MINIO_PORT}" --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       - minio-data:/data
 
@@ -33,9 +33,31 @@ services:
       /bin/sh -c "
       echo 'Waiting for MinIO...' &&
       sleep 5 &&
-      aws --endpoint-url http://minio:9000 s3 mb s3://${MINIO_BUCKET_NAME:-lms-assets} || true &&
-      echo 'MinIO bucket ready: '${MINIO_BUCKET_NAME:-lms-assets}
+      aws --endpoint-url http://minio:${MINIO_PORT} s3 mb s3://${MINIO_BUCKET_NAME} || true &&
+      echo 'MinIO bucket ready: '${MINIO_BUCKET_NAME}
       "
+
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: lms-postgres-prod
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    command: -p ${DB_PORT}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================
   # Redis Cache & Rate Limiting
@@ -45,11 +67,13 @@ services:
     container_name: lms-redis-prod
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     command:
       - redis-server
+      - --port
+      - ${REDIS_PORT}
       - --appendonly
       - "yes"
       - --requirepass
@@ -70,13 +94,13 @@ services:
     container_name: lms-rabbitmq-prod
     restart: unless-stopped
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_UI_PORT:-15672}:15672"
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
-      RABBITMQ_NODE_PORT: 5672
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_management listener [{port,15672}]"
+      RABBITMQ_NODE_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_management listener [{port,${RABBITMQ_UI_PORT}}]"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
