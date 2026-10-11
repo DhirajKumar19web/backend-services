@@ -66,9 +66,15 @@
 | Service | Port | Status | Description |
 |---------|------|--------|-------------|
 | 🚀 **api-gateway** | `4000` | ✅ Active | Entry point — routing, rate limiting, JWT auth, reverse proxy |
-| 🔐 **auth-service** | `5001` | 🚧 In Progress | User authentication, authorization & token management |
-| 🔔 **notification-service** | `5002` | 🚧 In Progress | Push notifications, email alerts, SMS & messaging |
-| 🎓 **course-service** | `5003` | 📋 Planned | Course management (not yet created) |
+| 🔐 **auth-service** | `5001` | 🚧 Scaffold | Authentication, authorization & token management |
+| 🔔 **notification-service** | `5002` | 🚧 Scaffold | Email / SMS / push notifications |
+| 🎓 **course-service** | `5003` | 🚧 Scaffold | Course management (uses MinIO) |
+| 👤 **user-service** | `5004` | 🚧 Scaffold | User profiles (uses MinIO) |
+| 📝 **enrollment-service** | `5005` | 🚧 Scaffold | Course enrollments |
+| 💳 **payment-service** | `5006` | 🚧 Scaffold | Payments |
+| 📈 **progress-service** | `5007` | 🚧 Scaffold | Learner progress tracking |
+| 🧪 **assessment-service** | `5008` | 🚧 Scaffold | Quizzes & assessments |
+| 🏅 **certificate-service** | `5009` | 🚧 Scaffold | Certificate generation |
 | ⚡ **Redis** | `6379` | ✅ Active | Caching & rate limiting |
 
 ---
@@ -81,10 +87,11 @@
 | 🟢 Runtime | Node.js 24 (Alpine) | Lightweight server runtime |
 | ⚡ Framework | Express.js 5.x | HTTP server & routing |
 | 🛡️ Validation | Zod 4.x | Schema-based env & input validation |
+| 🔑 Auth | jsonwebtoken 9.x | HS256 JWT verification at the gateway |
 | 📝 Logging | Pino + pino-http | Structured JSON logging |
 | 🗄️ Database | PostgreSQL 15 (Alpine) | Core Relational DB |
 | 🔴 Cache | Redis 8 (Alpine) | Rate limiting & caching |
-| 🔀 Proxy | http-proxy-middleware 4.x | Reverse proxy to microservices |
+| 🔀 Proxy | express-http-proxy 2.x | Reverse proxy to microservices (streams bodies, 30s timeout) |
 | 🔒 Security | Helmet 8.x | HTTP security headers |
 | 🐳 Containers | Docker + Docker Compose | Service orchestration |
 | 🔄 Dev Server | tsx (watch mode) | Hot-reload in development |
@@ -157,6 +164,10 @@ curl http://localhost:5002/health
 | `POST` | `/api/v1/auth/login` | User login |
 | `POST` | `/api/v1/auth/register` | User registration |
 
+> [!NOTE]
+> The gateway strips its prefix before forwarding, so services define routes relative to their root:
+> `POST /api/v1/auth/login` (gateway) → `POST /login` (auth-service).
+
 ### Notification Routes (via Gateway)
 
 | Method | Endpoint | Description |
@@ -174,13 +185,10 @@ curl http://localhost:5002/health
 🛡️ Helmet Security
     │
     ▼
-🆔 Request ID
+📝 Pino Logger + Request ID
     │
     ▼
 🌐 CORS
-    │
-    ▼
-📝 Pino Logger
     │
     ▼
 ⏱️ Rate Limiter
@@ -189,10 +197,7 @@ curl http://localhost:5002/health
 🔑 JWT Auth
     │
     ▼
-📋 Body Parser
-    │
-    ▼
-🔀 Proxy / Routes
+🔀 Proxy / Routes (bodies streamed to services)
     │
     ▼
 📤 Response
@@ -203,7 +208,7 @@ curl http://localhost:5002/health
 | 🛡️ **Security Headers** | Helmet-based HTTP security |
 | 🆔 **Request Tracing** | UUID per request for distributed tracing |
 | ⏱️ **Rate Limiting** | Redis-backed request throttling |
-| 🔑 **JWT Authentication** | Optional Bearer token verification |
+| 🔑 **JWT Authentication** | Optional Bearer token verification; client-sent `x-user-*` headers are stripped, verified `x-user-id` / `x-user-role` / `x-user-email` forwarded |
 | 🔀 **Reverse Proxy** | Dynamic forwarding to downstream services |
 | 📝 **Structured Logging** | JSON logs with Pino |
 | 🔄 **Graceful Shutdown** | SIGTERM/SIGINT handling with Redis cleanup |
@@ -222,15 +227,13 @@ curl http://localhost:5002/health
 │   ├── src/
 │   │   ├── server.ts               # Entry point + graceful shutdown
 │   │   ├── app.ts                  # Express app + middleware chain
-│   │   ├── config/env.ts           # Zod-validated env config
-│   │   ├── middlewares/            # Security, auth, rate-limit, logging
-│   │   ├── proxy/                  # Reverse proxy factory
-│   │   ├── routes/                 # Health & gateway routes
-│   │   ├── redis/                  # Redis client
-│   │   └── errors/                 # Custom error classes
+│   │   ├── errors.ts               # AppError
+│   │   ├── config/                 # env (Zod), logger (Pino), redis
+│   │   ├── middlewares/            # auth, rate-limit, request-logger, error
+│   │   └── routes/                 # health + proxy (all services from env)
 │   ├── Dockerfile
 │   ├── Dockerfile.dev
-│   ├── docker-compose.yml      # Standalone deployment
+│   ├── docker-compose.yml          # Standalone deployment
 │   └── .env.example
 │
 ├── 📁 auth-service/                # 🚧 Authentication service
@@ -245,6 +248,24 @@ curl http://localhost:5002/health
     ├── Dockerfile
     └── Dockerfile.dev
 ```
+
+---
+
+## ⚙️ Gateway Runtime Settings (`.env`)
+
+All values are required and validated with Zod at startup — nothing is hardcoded in code.
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `LOG_LEVEL` | `debug` / `info` | Pino log level |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate-limit window |
+| `RATE_LIMIT_MAX_REQUESTS` | `100` | Requests allowed per IP per window |
+| `TRUST_PROXY` | `false` / `1` | Set `1` behind Nginx / a load balancer so the real client IP is used |
+| `CORS_ORIGINS` | `*` or `https://app.example.com,https://admin.example.com` | Allowed origins (`*` = any) |
+| `PROXY_TIMEOUT_MS` | `30000` | Upstream timeout (returns 504) |
+| `SHUTDOWN_TIMEOUT_MS` | `10000` | Forced exit if connections don't drain |
+
+Each service reads its `PORT` from `.env` (no fallback port in code).
 
 ---
 
@@ -303,7 +324,6 @@ cd notification-service && npm install && npm run dev
 - [ ] Auth Service — JWT login/register implementation
 - [ ] Auth Service — Database integration (PostgreSQL/MongoDB)
 - [ ] Notification Service — Email/SMS/Push logic
-- [ ] Course Service — New microservice
 - [ ] Message Queue (RabbitMQ) for async notifications
 - [ ] API documentation (Swagger/OpenAPI)
 - [ ] Unit & integration tests

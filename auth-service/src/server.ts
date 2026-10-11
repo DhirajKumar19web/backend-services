@@ -1,29 +1,29 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
+import "dotenv/config";
+import express from "express";
+import helmet from "helmet";
+import { z } from "zod";
 
-dotenv.config();
+const SERVICE_NAME = "auth-service";
+
+const env = z.object({ PORT: z.coerce.number().int().min(1).max(65535) }).parse(process.env);
 
 const app = express();
-const PORT = process.env.PORT || 5001;
 
 app.use(helmet());
-app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
-  res.json({ service: 'auth-service', status: 'OK', timestamp: new Date().toISOString() });
+app.get("/health", (_req, res) => {
+  res.json({ service: SERVICE_NAME, status: "OK", timestamp: new Date().toISOString() });
 });
 
-app.post('/api/v1/auth/login', (req, res) => {
-  res.json({ message: 'Login endpoint placeholder' });
+app.post("/login", (_req, res) => {
+  res.json({ message: "Login endpoint placeholder" });
 });
 
-app.post('/api/v1/auth/register', (req, res) => {
-  res.json({ message: 'Register endpoint placeholder' });
+app.post("/register", (_req, res) => {
+  res.json({ message: "Register endpoint placeholder" });
 });
 
-app.listen(PORT, () => {
-  console.log(`[auth-service] Running on port ${PORT}`);
+app.listen(env.PORT, () => {
+  console.log(`[${SERVICE_NAME}] Running on port ${env.PORT}`);
 });

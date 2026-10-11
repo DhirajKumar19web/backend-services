@@ -60,7 +60,8 @@ This is a **Learning Management System (LMS)** backend built on a **Microservice
 | **api-gateway** | `4000` | ✅ Fully Built | Entry point — routing, rate limiting, JWT auth, reverse proxy |
 | **auth-service** | `5001` | ⚠️ Placeholder | Login/Register endpoints (placeholder responses only) |
 | **notification-service** | `5002` | ⚠️ Placeholder | Notification send endpoint (placeholder response only) |
-| **course-service** | `5003` | ❌ Not Created | Referenced in config but folder doesn't exist |
+| **course-service** | `5003` | ⚠️ Placeholder | Scaffold only |
+| **user / enrollment / payment / progress / assessment / certificate** | `5004`–`5009` | ⚠️ Placeholder | Scaffolds only |
 | **Redis** | `6379` | ✅ Ready | Caching & rate limiting |
 
 ---
@@ -76,7 +77,7 @@ This is a **Learning Management System (LMS)** backend built on a **Microservice
 | Logging | Pino |
 | Database | PostgreSQL 15 (Alpine) |
 | Caching | Redis 8 (Alpine) |
-| Proxy | http-proxy-middleware |
+| Proxy | express-http-proxy |
 | Security | Helmet |
 | Containerization | Docker + Docker Compose |
 | Dev Server | tsx (watch mode) |
@@ -89,13 +90,12 @@ API Gateway is the most developed service. Its features:
 
 | Feature | File | Description |
 |---------|------|-------------|
-| Env Validation | `config/env.ts` | Zod schema validates all environment variables |
-| Security | `security.middleware.ts` | Helmet-based security headers |
-| Request ID | `request-id.middleware.ts` | Unique request ID per request |
-| Logging | `request-logger.middleware.ts` | Pino-based structured logging |
+| Env Validation | `config/env.ts` | Zod schema validates all environment variables (no hardcoded values) |
+| Security | `app.ts` | Helmet-based security headers |
+| Logging + Request ID | `request-logger.middleware.ts` | Pino-based structured logging, UUID per request |
 | Rate Limiting | `rate-limit.middleware.ts` | Redis-backed rate limiter |
-| JWT Auth | `auth.middleware.ts` | Optional JWT verification middleware |
-| Reverse Proxy | `proxy.ts` | `http-proxy-middleware` forwards to downstream services |
+| JWT Auth | `auth.middleware.ts` | Optional JWT verification (jsonwebtoken), strips spoofed `x-user-*` headers |
+| Reverse Proxy | `routes/proxy.routes.ts` | `express-http-proxy` forwards to downstream services (prefix stripped, bodies streamed, timeout) |
 | Error Handling | `error.middleware.ts` | Centralized error handler |
 | Graceful Shutdown | `server.ts` | SIGTERM/SIGINT handle & Redis clean close |
 
@@ -181,7 +181,7 @@ curl http://localhost:5001/health
 # Notification Service health check
 curl http://localhost:5002/health
 
-# Auth login endpoint (placeholder)
+# Auth login endpoint via gateway (placeholder) -> forwarded to auth-service as POST /login
 curl -X POST http://localhost:4000/api/v1/auth/login
 
 # Notification endpoint (placeholder)
@@ -208,9 +208,6 @@ docker compose down -v
 
 > [!IMPORTANT]
 > **Auth Service & Notification Service are both placeholders** — they only have basic health check and placeholder endpoints. Real business logic (JWT token generation, DB connection, actual notification sending) is not implemented yet.
-
-> [!WARNING]
-> **Course Service (`course-service`)** is referenced in `.env` and proxy config, but the folder has not been created yet. Docker Compose also doesn't define its container. Routes to `/api/v1/courses/*` will fail.
 
 > [!NOTE]
 > **No Database** is being used by any service currently. Auth service will typically need PostgreSQL/MongoDB for storing user data.

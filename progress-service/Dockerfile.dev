@@ -8,5 +8,4 @@ RUN npm install
 
 COPY . .
 
-# Assume the dev script is what the user uses
 CMD ["npm", "run", "dev"]

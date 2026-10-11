@@ -1,60 +1,47 @@
-import { Request, Response, NextFunction } from "express";
+import type { RequestHandler } from "express";
 
-import { redis } from "../redis/redis.js";
-import { logger } from "./request-logger.middleware.js";
-import { ClientIdentifierResolver } from "../utils/client-identifier.util.js";
-import {
-  IDENTIFIER_TYPE,
-  RATE_LIMIT,
-} from "../constants/rate-limit.constants.js";
-import { TooManyRequestsError } from "../errors/app-error.js";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
+import { redis } from "../config/redis.js";
+import { AppError } from "../errors.js";
 
-export const rateLimitMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  const clientIdentifier = ClientIdentifierResolver.resolveIdentifier(
-    req,
-    IDENTIFIER_TYPE.IP,
-  );
+const { RATE_LIMIT_WINDOW_SECONDS: windowSeconds, RATE_LIMIT_MAX_REQUESTS: maxRequests } = env;
 
-  const key = `ratelimit:${clientIdentifier}`;
+const consumeRequest = async (key: string) => {
+  const results = await redis
+    .multi()
+    .incr(key)
+    .expire(key, windowSeconds, "NX")
+    .ttl(key)
+    .exec();
+
+  if (!results || results.some(([error]) => error)) {
+    throw new Error("Rate limit transaction failed");
+  }
+
+  const [count = 0, , ttl = 0] = results.map(([, value]) => Number(value));
+  return { count, resetIn: ttl > 0 ? ttl : windowSeconds };
+};
+
+export const rateLimitMiddleware: RequestHandler = async (req, res, next) => {
+  let usage: Awaited<ReturnType<typeof consumeRequest>>;
 
   try {
-    const currentRequests = await redis.incr(key);
-
-    if (currentRequests === 1) {
-      await redis.expire(key, RATE_LIMIT.WINDOW_SIZE_IN_SECONDS);
-    }
-
-    const ttl = await redis.ttl(key);
-
-    res.setHeader("X-RateLimit-Limit", RATE_LIMIT.MAX_REQUEST_LIMIT);
-    res.setHeader(
-      "X-RateLimit-Remaining",
-      Math.max(0, RATE_LIMIT.MAX_REQUEST_LIMIT - currentRequests),
-    );
-    res.setHeader(
-      "X-RateLimit-Reset",
-      ttl > 0 ? ttl : RATE_LIMIT.WINDOW_SIZE_IN_SECONDS,
-    );
-
-    if (currentRequests > RATE_LIMIT.MAX_REQUEST_LIMIT) {
-      return next(
-        new TooManyRequestsError(
-          "Too many requests, please try again later",
-          ttl > 0 ? ttl : RATE_LIMIT.WINDOW_SIZE_IN_SECONDS,
-        ),
-      );
-    }
-
-    next();
+    usage = await consumeRequest(`ratelimit:${req.ip}`);
   } catch (error) {
-    logger.warn(
-      { error: (error as Error).message },
-      "Rate limiter Redis check failed, allowing request",
-    );
-    next();
+    logger.warn({ error: (error as Error).message }, "Rate limiter unavailable, allowing request");
+    return next();
   }
+
+  res.setHeader("X-RateLimit-Limit", maxRequests);
+  res.setHeader("X-RateLimit-Remaining", Math.max(0, maxRequests - usage.count));
+  res.setHeader("X-RateLimit-Reset", usage.resetIn);
+
+  if (usage.count > maxRequests) {
+    return next(
+      new AppError(429, "Too many requests, please try again later", "ERR_TOO_MANY_REQUESTS", usage.resetIn),
+    );
+  }
+
+  next();
 };

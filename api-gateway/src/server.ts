@@ -1,36 +1,32 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
-import { redis } from "./redis/redis.js";
-import { logger } from "./middlewares/request-logger.middleware.js";
+import { logger } from "./config/logger.js";
+import { redis } from "./config/redis.js";
 
-const server = app.listen(
-  env.GATEWAY_PORT,
-  env.GATEWAY_HOST,
-  () => {
-    logger.info(
-      `API Gateway running on http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}`,
-    );
-  },
-);
+const server = app.listen(env.GATEWAY_PORT, env.GATEWAY_HOST, () => {
+  logger.info(`API Gateway running on http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}`);
+});
 
-const shutdown = async (signal: string) => {
-  logger.info(`${signal} received. Gracefully shutting down...`);
+let isShuttingDown = false;
 
-  server.close(async () => {
-    logger.info("HTTP server closed");
+const shutdown = (signal: string) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`${signal} received, shutting down`);
 
-    await redis.quit();
+  setTimeout(() => {
+    logger.error(`Shutdown timed out after ${env.SHUTDOWN_TIMEOUT_MS}ms, forcing exit`);
+    process.exit(1);
+  }, env.SHUTDOWN_TIMEOUT_MS).unref();
 
-    logger.info("Redis connection closed");
-
-    process.exit(0);
+  server.close(async (error) => {
+    if (error) logger.error({ error: error.message }, "Error closing HTTP server");
+    await redis.quit().catch(() => undefined);
+    process.exit(error ? 1 : 0);
   });
+  server.closeIdleConnections();
 };
 
-process.on("SIGTERM", () => {
-  void shutdown("SIGTERM");
-});
-
-process.on("SIGINT", () => {
-  void shutdown("SIGINT");
-});
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (reason) => logger.error({ reason }, "Unhandled promise rejection"));

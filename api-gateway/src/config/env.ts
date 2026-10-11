@@ -1,96 +1,75 @@
 import "dotenv/config";
 import { z } from "zod";
 
-import { logger } from "../middlewares/request-logger.middleware.js";
+const SERVICE_NAMES = [
+  "auth",
+  "user",
+  "course",
+  "notification",
+  "enrollment",
+  "payment",
+  "progress",
+  "assessment",
+  "certificate",
+] as const;
 
-const envSchema = z
-  .object({
-    NODE_ENV: z.enum(["development", "test", "production"]),
+const port = z.coerce.number().int().min(1).max(65535);
+const positiveInt = z.coerce.number().int().positive();
 
-    GATEWAY_HOST: z.string().min(1),
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]),
+  GATEWAY_HOST: z.string().min(1),
+  GATEWAY_PORT: port,
+  API_PREFIX: z.string().min(1),
+  API_VERSION: z.string().min(1),
+  JWT_SECRET: z.string().min(1),
+  REDIS_HOST: z.string().min(1),
+  REDIS_PORT: port,
+  REDIS_PASSWORD: z.string().min(1),
+  RATE_LIMIT_WINDOW_SECONDS: positiveInt,
+  RATE_LIMIT_MAX_REQUESTS: positiveInt,
+  TRUST_PROXY: z.string().min(1),
+  CORS_ORIGINS: z.string().min(1),
+  PROXY_TIMEOUT_MS: positiveInt,
+  SHUTDOWN_TIMEOUT_MS: positiveInt,
+  SERVICES: z.array(
+    z.object({ name: z.string(), url: z.url(), prefix: z.string().min(1) }),
+  ),
+});
 
-    GATEWAY_PORT: z
-      .coerce
-      .number()
-      .int()
-      .min(1)
-      .max(65535),
+const parsed = envSchema.safeParse({
+  ...process.env,
+  SERVICES: SERVICE_NAMES.map((name) => ({
+    name,
+    url: process.env[`${name.toUpperCase()}_SERVICE_URL`],
+    prefix: process.env[`${name.toUpperCase()}_ROUTE_PREFIX`],
+  })),
+});
 
-    JWT_SECRET: z.string().min(1),
-
-    API_PREFIX: z.string().min(1),
-
-    API_VERSION: z.string().min(1),
-
-    REDIS_HOST: z.string().min(1),
-
-    REDIS_PORT: z
-      .coerce
-      .number()
-      .int()
-      .min(1)
-      .max(65535),
-
-    REDIS_PASSWORD: z.string().min(1),
-
-    AUTH_SERVICE_URL: z.url(),
-    AUTH_ROUTE_PREFIX: z.string().min(1),
-
-    USER_SERVICE_URL: z.url(),
-    USER_ROUTE_PREFIX: z.string().min(1),
-
-    COURSE_SERVICE_URL: z.url(),
-    COURSE_ROUTE_PREFIX: z.string().min(1),
-
-    NOTIFICATION_SERVICE_URL: z.url(),
-    NOTIFICATION_ROUTE_PREFIX: z.string().min(1),
-
-    ENROLLMENT_SERVICE_URL: z.url(),
-    ENROLLMENT_ROUTE_PREFIX: z.string().min(1),
-
-    PAYMENT_SERVICE_URL: z.url(),
-    PAYMENT_ROUTE_PREFIX: z.string().min(1),
-
-    PROGRESS_SERVICE_URL: z.url(),
-    PROGRESS_ROUTE_PREFIX: z.string().min(1),
-
-    ASSESSMENT_SERVICE_URL: z.url(),
-    ASSESSMENT_ROUTE_PREFIX: z.string().min(1),
-
-    CERTIFICATE_SERVICE_URL: z.url(),
-    CERTIFICATE_ROUTE_PREFIX: z.string().min(1),
-  })
-  .transform((data) => {
-    const apiBase = `${data.API_PREFIX.replace(/\/+$/, "")}/${data.API_VERSION.replace(/^\/+|\/+$/g, "")}`;
-    const formatPrefix = (prefix: string) => {
-      if (prefix.startsWith(apiBase)) return prefix;
-      const cleanPrefix = prefix.startsWith("/") ? prefix : `/${prefix}`;
-      return `${apiBase}${cleanPrefix}`;
-    };
-
-    return {
-      ...data,
-      AUTH_ROUTE_PREFIX: formatPrefix(data.AUTH_ROUTE_PREFIX),
-      USER_ROUTE_PREFIX: formatPrefix(data.USER_ROUTE_PREFIX),
-      COURSE_ROUTE_PREFIX: formatPrefix(data.COURSE_ROUTE_PREFIX),
-      NOTIFICATION_ROUTE_PREFIX: formatPrefix(data.NOTIFICATION_ROUTE_PREFIX),
-      ENROLLMENT_ROUTE_PREFIX: formatPrefix(data.ENROLLMENT_ROUTE_PREFIX),
-      PAYMENT_ROUTE_PREFIX: formatPrefix(data.PAYMENT_ROUTE_PREFIX),
-      PROGRESS_ROUTE_PREFIX: formatPrefix(data.PROGRESS_ROUTE_PREFIX),
-      ASSESSMENT_ROUTE_PREFIX: formatPrefix(data.ASSESSMENT_ROUTE_PREFIX),
-      CERTIFICATE_ROUTE_PREFIX: formatPrefix(data.CERTIFICATE_ROUTE_PREFIX),
-    };
-  });
-
-const parsedEnv = envSchema.safeParse(process.env);
-
-if (!parsedEnv.success) {
-  logger.error(
-    { errors: parsedEnv.error.issues },
-    "Invalid environment variables",
-  );
-
+if (!parsed.success) {
+  console.error(`Invalid environment variables:\n${z.prettifyError(parsed.error)}`);
   process.exit(1);
 }
 
-export const env = parsedEnv.data;
+const { SERVICES, TRUST_PROXY, CORS_ORIGINS, ...config } = parsed.data;
+
+const joinPath = (...parts: string[]) =>
+  `/${parts.join("/")}`.replace(/\/+/g, "/").replace(/\/$/, "");
+
+// "true" | "false" | hop count | IP/subnet list, as accepted by Express "trust proxy"
+const parseTrustProxy = (value: string) => {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return /^\d+$/.test(value) ? Number(value) : value;
+};
+
+export const env = {
+  ...config,
+  TRUST_PROXY: parseTrustProxy(TRUST_PROXY),
+  CORS_ORIGINS: CORS_ORIGINS === "*" ? true : CORS_ORIGINS.split(",").map((origin) => origin.trim()),
+  SERVICES: SERVICES.map((service) => ({
+    ...service,
+    prefix: joinPath(config.API_PREFIX, config.API_VERSION, service.prefix),
+  })),
+};

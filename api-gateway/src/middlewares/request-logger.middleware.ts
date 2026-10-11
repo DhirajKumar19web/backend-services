@@ -1,25 +1,23 @@
+import { randomUUID } from "node:crypto";
 import { pinoHttp } from "pino-http";
-import { pino } from "pino";
-import { REQUEST_ID_HEADER } from "./request-id.middleware.js";
 
-export const logger = pino({
-  level: process.env.NODE_ENV === "production" ? "info" : "debug",
-});
+import { logger } from "../config/logger.js";
+
+export const REQUEST_ID_HEADER = "x-request-id";
 
 export const requestLoggerMiddleware = pinoHttp({
   logger,
-  genReqId: (req) => {
-    return (req.headers[REQUEST_ID_HEADER] as string) || "unknown-id";
+  genReqId: (req, res) => {
+    const incoming = req.headers[REQUEST_ID_HEADER];
+    const requestId = typeof incoming === "string" && incoming.trim() ? incoming : randomUUID();
+
+    req.headers[REQUEST_ID_HEADER] = requestId;
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+    return requestId;
   },
   customLogLevel: (_req, res, err) => {
-    if (res.statusCode >= 500 || err) return "error";
-    if (res.statusCode >= 400) return "warn";
-    return "info";
+    if (err || res.statusCode >= 500) return "error";
+    return res.statusCode >= 400 ? "warn" : "info";
   },
-  customSuccessMessage: (req, res) => {
-    return `${req.method} ${req.url} ${res.statusCode}`;
-  },
-  customErrorMessage: (req, res, err) => {
-    return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
-  },
+  customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
 });
