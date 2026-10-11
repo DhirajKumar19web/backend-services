@@ -44,3 +44,33 @@ export const courseProxy = createServiceProxy(
   env.COURSE_SERVICE_URL,
   env.COURSE_ROUTE_PREFIX,
 );
+
+export const notificationProxy = createServiceProxy(
+  env.NOTIFICATION_SERVICE_URL,
+  env.NOTIFICATION_ROUTE_PREFIX,
+);
+
+export const enrollmentProxy = createServiceProxy(
+  env.ENROLLMENT_SERVICE_URL,
+  env.ENROLLMENT_ROUTE_PREFIX,
+);
+
+export const paymentProxy = createServiceProxy(
+  env.PAYMENT_SERVICE_URL,
+  env.PAYMENT_ROUTE_PREFIX,
+);
+
+export const progressProxy = createServiceProxy(
+  env.PROGRESS_SERVICE_URL,
+  env.PROGRESS_ROUTE_PREFIX,
+);
+
+export const assessmentProxy = createServiceProxy(
+  env.ASSESSMENT_SERVICE_URL,
+  env.ASSESSMENT_ROUTE_PREFIX,
+);
+
+export const certificateProxy = createServiceProxy(
+  env.CERTIFICATE_SERVICE_URL,
+  env.CERTIFICATE_ROUTE_PREFIX,
+);

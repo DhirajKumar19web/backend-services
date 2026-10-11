@@ -41,6 +41,24 @@ const envSchema = z
 
     COURSE_SERVICE_URL: z.url(),
     COURSE_ROUTE_PREFIX: z.string().min(1),
+
+    NOTIFICATION_SERVICE_URL: z.url(),
+    NOTIFICATION_ROUTE_PREFIX: z.string().min(1),
+
+    ENROLLMENT_SERVICE_URL: z.url(),
+    ENROLLMENT_ROUTE_PREFIX: z.string().min(1),
+
+    PAYMENT_SERVICE_URL: z.url(),
+    PAYMENT_ROUTE_PREFIX: z.string().min(1),
+
+    PROGRESS_SERVICE_URL: z.url(),
+    PROGRESS_ROUTE_PREFIX: z.string().min(1),
+
+    ASSESSMENT_SERVICE_URL: z.url(),
+    ASSESSMENT_ROUTE_PREFIX: z.string().min(1),
+
+    CERTIFICATE_SERVICE_URL: z.url(),
+    CERTIFICATE_ROUTE_PREFIX: z.string().min(1),
   })
   .transform((data) => {
     const apiBase = `${data.API_PREFIX.replace(/\/+$/, "")}/${data.API_VERSION.replace(/^\/+|\/+$/g, "")}`;
@@ -55,6 +73,12 @@ const envSchema = z
       AUTH_ROUTE_PREFIX: formatPrefix(data.AUTH_ROUTE_PREFIX),
       USER_ROUTE_PREFIX: formatPrefix(data.USER_ROUTE_PREFIX),
       COURSE_ROUTE_PREFIX: formatPrefix(data.COURSE_ROUTE_PREFIX),
+      NOTIFICATION_ROUTE_PREFIX: formatPrefix(data.NOTIFICATION_ROUTE_PREFIX),
+      ENROLLMENT_ROUTE_PREFIX: formatPrefix(data.ENROLLMENT_ROUTE_PREFIX),
+      PAYMENT_ROUTE_PREFIX: formatPrefix(data.PAYMENT_ROUTE_PREFIX),
+      PROGRESS_ROUTE_PREFIX: formatPrefix(data.PROGRESS_ROUTE_PREFIX),
+      ASSESSMENT_ROUTE_PREFIX: formatPrefix(data.ASSESSMENT_ROUTE_PREFIX),
+      CERTIFICATE_ROUTE_PREFIX: formatPrefix(data.CERTIFICATE_ROUTE_PREFIX),
     };
   });
 
