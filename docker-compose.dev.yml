@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # ============================================================
@@ -299,6 +298,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - lms-network
 
   # ============================================================
   # Redis Cache & Rate Limiting (Official Standard Stable Tag)
@@ -360,6 +361,8 @@ networks:
     driver: bridge
 
 volumes:
+  postgres-data:
+    driver: local
   minio-data:
     driver: local
   redis-data:
